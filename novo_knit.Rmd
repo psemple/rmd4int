@@ -1,0 +1,261 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+## **Prepara as análises da PNAD**
+
+### **Ativa bibliotecas que vai usar**
+
+```{r message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(plyr)
+library(summarytools)
+```
+
+### **importa dados da Pnad**
+```{r }
+pnadnovo <- read.csv("C:/Users/jgsem/Downloads/4intelligence/base/pnad.csv",header=T)[-1,]
+```
+
+\
+\
+\
+
+### **Limpa base de dados, renomeia algumas variáveis de interesse e cria 2 bases, uma para o ano de 2019T4 e outra para ano 2020T4, já que o objetivo é comparar os últimos trimestres de cada ano**
+```{r }
+
+pnadlimpo <- pnadnovo[pnadnovo$V2008!=99,]
+pnadlimpo2 <- pnadlimpo %>% distinct(V1008, V2008, V20081, V20082, V2007, .keep_all = TRUE)
+ocup2020t4 <- pnadlimpo2 %>% filter(Ano == 2020 , Trimestre == 4, VD4002 ==1)
+ocup2019t4 <- pnadlimpo2 %>% filter(Ano == 2019 , Trimestre == 4, VD4002 ==1)
+varinteresse2019 <- c("V2007", "V2009", "V2010","VD3004", "VD4020", "VD4019","VD4031", "VD4035", "V4005")
+ocup2019t4int <- ocup2019t4[varinteresse2019]
+ocup2020t4int <- ocup2020t4[varinteresse2019]
+ocup2019t4novonome <- rename(ocup2019t4int , c("V2007" = "Genero", "V2009" = "idade" ,"V2010" = "cor" ,"VD3004" = "nivel_instrucao" ,"VD4020" = "rendimento_efetivo", "VD4019" = "Rendimento_habitual", "VD4031" = "horas_trabalhadas_habitual", "VD4035" = "horas_efetivas", "V4005" = "afastado")) 
+ocup2020t4novonome <- rename(ocup2020t4int , c("V2007" = "Genero", "V2009" = "idade" ,"V2010" = "cor" ,"VD3004" = "nivel_instrucao" ,"VD4020" = "rendimento_rendimento_efetivo", "VD4019" = "Rendimento_habitual", "VD4031" = "horas_trabalhadas_habitual", "VD4035" = "horas_efetivas", "V4005" = "afastado"))
+
+```
+\
+\
+\
+
+## **vê resumo das variáveis de 2019**
+
+```{r message=FALSE}
+print(dfSummary(ocup2019t4novonome, graph.magnif = 0.75), method = 'render')
+```
+\
+\
+\
+
+
+
+## **vê resumo das variáveis de 2020**
+```{r message=FALSE}
+print(dfSummary(ocup2020t4novonome, graph.magnif = 0.75), method = 'render')
+
+```
+\
+\
+\
+
+
+## **Características dos dados**
+
+### - Há 155821 ocupados no quarto trimestre de 2019, lembrando que não consideramos o peso na população já que a pesquisa é amostral.
+
+### A predominância de raças é branco (1) e pardos (4)
+
+### - Há 41089 ocupados no quarto trimestre de 2020
+
+### - Observando ambos anos se observa uma predominância masculina (número 1)
+
+### - idade bem distribúda na população (há menos idosos já que se aposentaram)
+
+### - Há desigualdade relevante na renda, com predominância de patamares mais baixos
+
+### - O número de horas trabalhadas tem concentração maior perto das 40 horas semanais  
+
+### Quando ao nível educacional há distribuição heterogênea entre ensino fundamental incompleto (2), ensino médio completo (5) e ensino superior completo (7)
+
+\
+\
+\
+
+## **Histograma para idade dos ocupados de 2019**
+
+```{r message=FALSE}
+qplot(ocup2020t4novonome$idade,
+      geom="histogram",
+      binwidth = 5,  
+      main = "Histograma para idade 2020T4", 
+      xlab = "Age",  
+      fill=I("blue"), 
+      col=I("red"), 
+      alpha=I(.2),
+      xlim=c(0,100))
+```
+
+\
+
+## Histograma para idade dos ocupados de 2020
+```{r message=FALSE}
+qplot(ocup2019t4novonome$idade,
+      geom="histogram",
+      binwidth = 5,  
+      main = "Histograma para idade 2019T4", 
+      xlab = "Age",  
+      fill=I("blue"), 
+      col=I("red"), 
+      alpha=I(.2),
+      xlim=c(0,100))
+```
+
+### **- Com relação ao histograma das idades, não se observa mudança significativa com isolamento social relacionado à pandemia de 2020, quando comparado com 2019**
+
+\
+\
+\
+
+
+## **Histograma para renda habitual dos ocupados de 2019**
+```{r message=FALSE}
+qplot(ocup2019t4novonome$Rendimento_habitual,
+      geom="histogram",
+      binwidth = 250,  
+      main = "Histograma para renda habitual 2019T4", 
+      xlab = "Age",  
+      fill=I("blue"), 
+      col=I("red"), 
+      alpha=I(.2),
+      xlim=c(0,10000))
+```
+\
+
+## **Histograma para renda habitual dos ocupados de 2020**
+```{r message=FALSE}
+qplot(ocup2019t4novonome$Rendimento_habitual,
+      geom="histogram",
+      binwidth = 250,  
+      main = "Histograma para renda habitual 2020T4", 
+      xlab = "Age",  
+      fill=I("blue"), 
+      col=I("red"), 
+      alpha=I(.2),
+      xlim=c(0,10000))
+```
+\
+
+### **As rendas mostram distribuição bastante assimétrica (desigual), com maior predominância ao redor de 1000 reais por mês**
+
+\
+\
+\
+
+### **Cria base para afastados e redução de jornada p/ 2019t4 e 2020t4**
+```{r }
+afastados2019 <- ocup2019t4[!(is.na(ocup2019t4$V4005)) ,]
+afastados2020 <- ocup2020t4[!(is.na(ocup2020t4$V4005)) ,]
+reducaojornada2019 <- subset(ocup2019t4, ocup2019t4$VD4035 < mean(ocup2019t4$VD4035)*0.75)
+reducaojornada2020 <- subset(ocup2020t4, ocup2020t4$VD4035 > mean(ocup2020t4$VD4035)*0.75)
+```
+\
+\
+
+## **Cria variáveis de interesse de renda**
+```{r }
+varinteresserenda <- c("VD4020", "VD4019")
+afastados2019renda <- afastados2019[varinteresserenda]
+afastados2020renda <- afastados2020[varinteresserenda]
+reducaojornada2019renda <- reducaojornada2019[varinteresserenda]
+reducaojornada2020renda <- reducaojornada2020[varinteresserenda]
+ocup2019t4renda <- ocup2019t4[varinteresserenda]
+ocup2020t4renda <- ocup2020t4[varinteresserenda]
+```
+\
+\
+
+## **Renomeia variáveis de renda**
+```{r }
+names(afastados2019renda)[1] <- "rendimento_efetivo"
+names(afastados2019renda)[2] <- "rendimento_habitual"
+names(afastados2020renda)[1] <- "rendimento_efetivo"
+names(afastados2020renda)[2] <- "rendimento_habitual"
+names(reducaojornada2019renda)[1] <- "rendimento_efetivo"
+names(reducaojornada2019renda)[2] <- "rendimento_habitual"
+names(reducaojornada2020renda)[1] <- "rendimento_efetivo"
+names(reducaojornada2020renda)[2] <- "rendimento_habitual"
+names(ocup2019t4renda)[1] <- "rendimento_efetivo"
+names(ocup2019t4renda)[2] <- "rendimento_habitual"
+names(ocup2020t4renda)[1] <- "rendimento_efetivo"
+names(ocup2020t4renda)[2] <- "rendimento_habitual"
+```
+\
+\
+
+
+## **Resumo da Renda dos afastados 2019T4**
+
+```{r }
+print(dfSummary(afastados2019renda, graph.magnif = 0.75), method = 'render')
+```
+\
+\
+
+## **Resumo da Renda dos afastados 2020T4**
+
+```{r }
+print(dfSummary(afastados2020renda, graph.magnif = 0.75), method = 'render')
+```
+\
+
+## **A renda média efetiva dos afastados caiu, mas a habitual subiu.**
+
+\
+\
+
+## **Resumo da Renda dos com Redução de Jornada DE 2019T4**
+
+```{r }
+print(dfSummary(reducaojornada2019renda, graph.magnif = 0.75), method = 'render')
+```
+\
+\
+
+## **Resumo da Renda dos com Redução de Jornada DE 2020T4**
+
+```{r }
+print(dfSummary(reducaojornada2020renda, graph.magnif = 0.75), method = 'render')
+```
+\
+
+\
+
+## **A renda média efetiva e habitual dos com redução de jornada subiu bastante. Provavelmente as empresas quiseram manter os funcionários mais qualificados, mesmo que não precisassem tanto deles no curto prazo pela queda da demanda de alguns setores. E ainda devem ter casos de pessoas mais velhas que não trabalharam por conta da pandemia.**
+
+\
+\
+
+## **Resumo da Renda dos ocupados 2019T4**
+```{r }
+print(dfSummary(ocup2019t4renda, graph.magnif = 0.75), method = 'render')
+```
+\
+\
+
+##  **Resumo da Renda dos ocupados 2020T4**
+
+```{r }
+print(dfSummary(ocup2020t4renda, graph.magnif = 0.75), method = 'render')
+```
+\
+
+## **Conclusões sobre a renda**
+
+\
+
+##  A renda efetiva e habitual dos ocupados teve uma alta expressiva. Provavelmente os trabalhadores menos qualificados do setor de serviços foram desligados por falta de demanda e os trabalhadores mais qualificados continuaram trabalhando.
